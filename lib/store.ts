@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
-import { Pool } from 'pg';
+import { Pool, PoolConfig } from 'pg';
 
 export interface Paste {
   id: string;
@@ -105,22 +105,31 @@ class RedisPasteStore implements PasteStore {
 }
 
 // --- Postgres Implementation ---
-// Expects a table `pastes` to exist.
-// Since we don't have a migration system set up, we will attempt to create the table on initialization if possible,
-// or just assume it exists. For robust "No manual migration" requirement,
-// we should try to create it if it doesn't exist (e.g. `CREATE TABLE IF NOT EXISTS`).
-
 class PostgresPasteStore implements PasteStore {
   private pool: Pool;
   private ready: Promise<void>;
 
   constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString });
+    // Neon and most cloud Postgres require SSL.
+    // We enable it if the host looks like a remote host (not localhost/127.0.0.1).
+    // Or simpler: connection string from Neon usually has sslmode=require, but pg client needs explicit config sometimes.
+    const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+
+    const config: PoolConfig = {
+      connectionString,
+    };
+
+    if (!isLocal) {
+      config.ssl = {
+        rejectUnauthorized: false // Often needed for managed databases to avoid CA issues
+      };
+    }
+
+    this.pool = new Pool(config);
     this.ready = this.init();
   }
 
   private async init() {
-    // Basic table structure
     const query = `
       CREATE TABLE IF NOT EXISTS pastes (
         id VARCHAR(50) PRIMARY KEY,
@@ -133,7 +142,6 @@ class PostgresPasteStore implements PasteStore {
     `;
     try {
       await this.pool.query(query);
-      // console.log("Postgres table initialized");
     } catch (e) {
       console.error("Failed to initialize Postgres table", e);
     }
@@ -173,12 +181,6 @@ class PostgresPasteStore implements PasteStore {
 
     const row = res.rows[0];
 
-    // Convert DB types back to interface types
-    // max_views can be null
-    // expires_at can be null (string or big int from PG driver?)
-    // pg returns bigint as string usually to avoid overflow, unless configured.
-    // Let's safe parse.
-
     return {
       id: row.id,
       content: row.content,
@@ -191,7 +193,6 @@ class PostgresPasteStore implements PasteStore {
 
   async incrementView(id: string): Promise<void> {
     await this.ready;
-    // Atomic increment in SQL is easy
     await this.pool.query('UPDATE pastes SET views = views + 1 WHERE id = $1', [id]);
   }
 
