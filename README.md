@@ -1,6 +1,6 @@
 # Pastebin Lite
 
-A simple, secure pastebin application built with Next.js.
+A simple, secure pastebin application built with Next.js and **shadcn/ui**.
 
 ## Features
 
@@ -9,8 +9,10 @@ A simple, secure pastebin application built with Next.js.
   - **TTL (Time To Live)**: Set an expiry time in seconds.
   - **View Limit**: Set a maximum number of views.
 - **Persistence**:
-  - Uses **Redis** in production (via `REDIS_URL`).
-  - Uses **File System** (JSON file) for local development (no setup required).
+  - **Redis**: Set `REDIS_URL`.
+  - **PostgreSQL / NeonDB**: Set `DATABASE_URL`.
+  - **File System**: Automatic fallback for local development (no setup required).
+- **UI**: Modern, accessible UI using Radix primitives via **shadcn/ui** and Tailwind CSS.
 
 ## Getting Started
 
@@ -52,33 +54,24 @@ pnpm tsx scripts/test-api.ts
 
 ## Persistence Layer
 
-I chose **Redis** (specifically compatible with Vercel KV or Upstash) for the production persistence layer because:
-- It is fast and suitable for key-value storage like paste IDs.
-- It supports TTL (Time To Live) natively, simplifying expiry logic.
-- It works well in serverless environments (connection pooling/HTTP clients).
+This application supports multiple persistence backends via a unified `PasteStore` interface:
 
-For local development, I implemented a **File System** fallback. This ensures that:
-- Developers don't need to spin up a Redis instance to run the app.
-- Data persists across hot-reloads and server restarts during development.
-- The application automatically switches based on the presence of the `REDIS_URL` environment variable.
+1.  **Redis**: Recommended for high performance and native TTL support. Used if `REDIS_URL` is present.
+2.  **PostgreSQL**: Supported via `pg`. Used if `DATABASE_URL` is present (and `REDIS_URL` is not).
+    -   Automatically creates the `pastes` table if it doesn't exist.
+    -   Ideal for services like NeonDB.
+3.  **File System**: Used if no environment variables are set. Persists data to `pastes.json` locally.
 
 ## Design Decisions
 
-- **Framework**: Next.js (App Router) was chosen for its serverless support, API route handling, and ease of deployment to Vercel.
-- **ID Generation**: Used `nanoid` for short, URL-friendly unique identifiers.
-- **Deterministic Testing**: Implemented a `TEST_MODE` that inspects the `x-test-now-ms` header to allow time-travel testing for expiry logic.
-- **View Counting**:
-  - View counts are stored in the same JSON object as the content.
-  - While this creates a potential race condition under high concurrency, it simplifies the architecture for a "Lite" version.
-  - Atomic increments are attempted (using Redis transactions or simple file locks logic in the fallback), but for high-scale production, separating counters or using RedisJSON/Lua scripts would be more robust.
-- **Security**:
-  - Content is rendered as text in a `<pre>` tag to prevent XSS.
-  - No secrets are committed to the repo.
+- **Framework**: Next.js 16 (App Router).
+- **UI Library**: shadcn/ui for accessible, composable components.
+- **ID Generation**: `nanoid` for collision-resistant short IDs.
+- **Deterministic Testing**: `TEST_MODE=1` enables time-travel testing via HTTP headers.
 
 ## API Endpoints
 
 - `GET /api/healthz`: Health check.
 - `POST /api/pastes`: Create a new paste.
-  - Body: `{ "content": "...", "ttl_seconds": 60, "max_views": 5 }`
-- `GET /api/pastes/:id`: Retrieve paste metadata (JSON).
+- `GET /api/pastes/:id`: Retrieve paste metadata.
 - `GET /p/:id`: View paste (HTML).

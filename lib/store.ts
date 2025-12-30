@@ -1,6 +1,7 @@
 import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
+import { Pool } from 'pg';
 
 export interface Paste {
   id: string;
@@ -86,7 +87,6 @@ class RedisPasteStore implements PasteStore {
       const results = await multi.exec();
 
       if (!results) {
-        // Recursive retry on conflict
         await this.incrementView(id);
       }
     } catch (e) {
@@ -104,8 +104,108 @@ class RedisPasteStore implements PasteStore {
   }
 }
 
-// --- File System Implementation (Fallback for Local Dev) ---
-// Using a file allows state to persist across hot-reloads and worker threads in Dev.
+// --- Postgres Implementation ---
+// Expects a table `pastes` to exist.
+// Since we don't have a migration system set up, we will attempt to create the table on initialization if possible,
+// or just assume it exists. For robust "No manual migration" requirement,
+// we should try to create it if it doesn't exist (e.g. `CREATE TABLE IF NOT EXISTS`).
+
+class PostgresPasteStore implements PasteStore {
+  private pool: Pool;
+  private ready: Promise<void>;
+
+  constructor(connectionString: string) {
+    this.pool = new Pool({ connectionString });
+    this.ready = this.init();
+  }
+
+  private async init() {
+    // Basic table structure
+    const query = `
+      CREATE TABLE IF NOT EXISTS pastes (
+        id VARCHAR(50) PRIMARY KEY,
+        content TEXT NOT NULL,
+        max_views INT,
+        views INT DEFAULT 0,
+        created_at BIGINT NOT NULL,
+        expires_at BIGINT
+      );
+    `;
+    try {
+      await this.pool.query(query);
+      // console.log("Postgres table initialized");
+    } catch (e) {
+      console.error("Failed to initialize Postgres table", e);
+    }
+  }
+
+  async createPaste(params: CreatePasteParams): Promise<string> {
+    await this.ready;
+    const { nanoid } = await import('nanoid');
+    const id = nanoid(10);
+    const now = Date.now();
+
+    let expires_at = null;
+    if (params.ttl_seconds !== undefined) {
+      expires_at = now + params.ttl_seconds * 1000;
+    }
+
+    const query = `
+      INSERT INTO pastes (id, content, max_views, views, created_at, expires_at)
+      VALUES ($1, $2, $3, 0, $4, $5)
+    `;
+
+    await this.pool.query(query, [
+      id,
+      params.content,
+      params.max_views ?? null,
+      now,
+      expires_at
+    ]);
+
+    return id;
+  }
+
+  async getPaste(id: string): Promise<Paste | null> {
+    await this.ready;
+    const res = await this.pool.query('SELECT * FROM pastes WHERE id = $1', [id]);
+    if (res.rows.length === 0) return null;
+
+    const row = res.rows[0];
+
+    // Convert DB types back to interface types
+    // max_views can be null
+    // expires_at can be null (string or big int from PG driver?)
+    // pg returns bigint as string usually to avoid overflow, unless configured.
+    // Let's safe parse.
+
+    return {
+      id: row.id,
+      content: row.content,
+      max_views: row.max_views !== null ? parseInt(row.max_views) : undefined,
+      views: parseInt(row.views),
+      created_at: parseInt(row.created_at),
+      expires_at: row.expires_at !== null ? parseInt(row.expires_at) : undefined,
+    };
+  }
+
+  async incrementView(id: string): Promise<void> {
+    await this.ready;
+    // Atomic increment in SQL is easy
+    await this.pool.query('UPDATE pastes SET views = views + 1 WHERE id = $1', [id]);
+  }
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      await this.pool.query('SELECT 1');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+}
+
+// --- File System Implementation (Fallback) ---
 class FilePasteStore implements PasteStore {
   private filePath: string;
 
@@ -161,7 +261,6 @@ class FilePasteStore implements PasteStore {
     const paste = data[id];
     if (!paste) return null;
 
-    // Check expiration logic
     if (paste.expires_at && Date.now() > paste.expires_at) {
       delete data[id];
       this.writeData(data);
@@ -193,10 +292,10 @@ export function getStore(): PasteStore {
   if (storeInstance) return storeInstance;
 
   if (process.env.REDIS_URL) {
-    // console.log("Using Redis persistence");
     storeInstance = new RedisPasteStore(process.env.REDIS_URL);
+  } else if (process.env.DATABASE_URL) {
+    storeInstance = new PostgresPasteStore(process.env.DATABASE_URL);
   } else {
-    // console.warn("No REDIS_URL found. Using File persistence.");
     storeInstance = new FilePasteStore();
   }
   return storeInstance;
