@@ -5,6 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge"; // I might need to install badge if not already
 import { Button } from "@/components/ui/button";
 import { Clock, Eye, Calendar, PlusCircle } from 'lucide-react';
+import Link from 'next/link';
+import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 
 // Need to install badge component? I'll check if it exists or use standard UI.
 // I'll stick to standard UI elements I installed or standard HTML if minor.
@@ -49,19 +51,20 @@ export default async function PastePage({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b bg-muted/50 rounded-t-lg">
           <CardTitle className="text-xl font-mono">Paste {id}</CardTitle>
           <Button variant="ghost" size="sm" asChild>
-            <a href="/">
+            <Link href="/">
               <PlusCircle className="mr-2 h-4 w-4" />
               New Paste
-            </a>
+            </Link>
           </Button>
+          <AnimatedThemeToggler className="absolute top-4 right-4" />
         </CardHeader>
         <CardContent className="p-0">
-          <div className="bg-neutral-950 text-neutral-50 p-6 overflow-x-auto min-h-[200px]">
+          <div className="bg-background text-foreground p-6 overflow-x-auto min-h-[200px]">
             <pre className="font-mono text-sm whitespace-pre-wrap">{paste.content}</pre>
           </div>
         </CardContent>

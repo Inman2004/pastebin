@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 import { AlertCircle, CheckCircle2, Copy, ExternalLink, RefreshCw } from 'lucide-react';
 
 export default function Home() {
@@ -62,11 +63,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>Pastebin Lite</CardTitle>
           <CardDescription>Share text securely with optional expiration.</CardDescription>
+          <AnimatedThemeToggler className="absolute top-4 right-4" />
         </CardHeader>
         <CardContent>
           {!result ? (
