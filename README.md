@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pastebin Lite
+
+A simple, secure pastebin application built with Next.js and **shadcn/ui**.
+
+## Features
+
+- **Create Pastes**: Share arbitrary text.
+- **Constraints**:
+  - **TTL (Time To Live)**: Set an expiry time in seconds.
+  - **View Limit**: Set a maximum number of views.
+- **Persistence**:
+  - **Redis**: Set `REDIS_URL`.
+  - **PostgreSQL / NeonDB**: Set `DATABASE_URL`.
+  - **File System**: Automatic fallback for local development (no setup required).
+- **UI**: Modern, accessible UI using Radix primitives via **shadcn/ui** and Tailwind CSS.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js
+- pnpm (or npm/yarn)
+
+### Installation
+
+1. Clone the repository.
+2. Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Running Locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Start the development server:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm dev
+```
 
-## Learn More
+Visit [http://localhost:3000](http://localhost:3000) to create a paste.
 
-To learn more about Next.js, take a look at the following resources:
+### Running Tests
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To run the functional tests (requires the server to be running in another terminal with `TEST_MODE=1`):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Terminal 1
+TEST_MODE=1 pnpm dev
 
-## Deploy on Vercel
+# Terminal 2
+pnpm tsx scripts/test-api.ts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Persistence Layer
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This application supports multiple persistence backends via a unified `PasteStore` interface:
+
+1.  **Redis**: Recommended for high performance and native TTL support. Used if `REDIS_URL` is present.
+2.  **PostgreSQL**: Supported via `pg`. Used if `DATABASE_URL` is present (and `REDIS_URL` is not).
+    -   Automatically creates the `pastes` table if it doesn't exist.
+    -   Ideal for services like NeonDB.
+3.  **File System**: Used if no environment variables are set. Persists data to `pastes.json` locally.
+
+## Design Decisions
+
+- **Framework**: Next.js 16 (App Router).
+- **UI Library**: shadcn/ui for accessible, composable components.
+- **ID Generation**: `nanoid` for collision-resistant short IDs.
+- **Deterministic Testing**: `TEST_MODE=1` enables time-travel testing via HTTP headers.
+
+## API Endpoints
+
+- `GET /api/healthz`: Health check.
+- `POST /api/pastes`: Create a new paste.
+- `GET /api/pastes/:id`: Retrieve paste metadata.
+- `GET /p/:id`: View paste (HTML).
