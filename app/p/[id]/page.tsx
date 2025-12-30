@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getStore } from '@/lib/store';
 import { getNow } from '@/lib/time';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge"; // I might need to install badge if not already
+// import { Badge } from "@/components/ui/badge"; // I might need to install badge if not already
 import { Button } from "@/components/ui/button";
 import { Clock, Eye, Calendar, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
