@@ -2,6 +2,7 @@ import Redis from 'ioredis';
 import fs from 'fs';
 import path from 'path';
 import { Pool, PoolConfig } from 'pg';
+import { generateId } from './id';
 
 export interface Paste {
   id: string;
@@ -34,8 +35,7 @@ class RedisPasteStore implements PasteStore {
   }
 
   async createPaste(params: CreatePasteParams): Promise<string> {
-    const { nanoid } = await import('nanoid');
-    const id = nanoid(10);
+    const id = generateId(10);
     const now = Date.now();
 
     const paste: Paste = {
@@ -144,13 +144,25 @@ class PostgresPasteStore implements PasteStore {
       await this.pool.query(query);
     } catch (e) {
       console.error("Failed to initialize Postgres table", e);
+      // We do not rethrow here because the connection might just be flaky or initially slow.
+      // However, createPaste waits for this.ready. If init fails, createPaste will likely fail on INSERT.
+      // But if we throw here, constructor (where init is called but not awaited) won't catch it unless we handle promise rejection.
+      // 'this.ready' captures the rejection if we throw.
+      throw e;
     }
   }
 
   async createPaste(params: CreatePasteParams): Promise<string> {
-    await this.ready;
-    const { nanoid } = await import('nanoid');
-    const id = nanoid(10);
+    try {
+      await this.ready;
+    } catch (e) {
+       console.error("Database initialization failed earlier:", e);
+       // We can try to proceed if the table exists from before, but likely it's a connection error.
+       // Rethrowing to ensure the API route catches it and logs it.
+       throw new Error("Database not ready");
+    }
+
+    const id = generateId(10);
     const now = Date.now();
 
     let expires_at = null;
@@ -232,8 +244,7 @@ class FilePasteStore implements PasteStore {
   }
 
   async createPaste(params: CreatePasteParams): Promise<string> {
-    const { nanoid } = await import('nanoid');
-    const id = nanoid(10);
+    const id = generateId(10);
     const now = Date.now();
 
     const paste: Paste = {

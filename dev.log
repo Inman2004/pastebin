@@ -1,0 +1,24 @@
+
+> pastebin@0.1.0 dev /app
+> next dev
+
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+✓ Ready in 1223ms
+ GET /api/healthz 200 in 907ms (compile: 877ms, render: 29ms)
+ POST /api/pastes 201 in 211ms (compile: 196ms, render: 15ms)
+ GET /api/pastes/S8YiBswqn1 200 in 1022ms (compile: 1005ms, render: 16ms)
+○ Compiling /p/[id] ...
+ GET /p/S8YiBswqn1 200 in 5.9s (compile: 4.8s, render: 1143ms)
+ POST /api/pastes 201 in 11ms (compile: 4ms, render: 7ms)
+ GET /api/pastes/Mxty-ckq23 200 in 32ms (compile: 23ms, render: 9ms)
+ GET /api/pastes/Mxty-ckq23 200 in 15ms (compile: 4ms, render: 11ms)
+ GET /api/pastes/Mxty-ckq23 404 in 10ms (compile: 3ms, render: 8ms)
+ POST /api/pastes 201 in 15ms (compile: 5ms, render: 10ms)
+ GET /api/pastes/oVvYTNfNZV 200 in 22ms (compile: 9ms, render: 13ms)
+ GET /api/pastes/oVvYTNfNZV 404 in 11ms (compile: 3ms, render: 9ms)
+ ELIFECYCLE  Command failed.
+[?25h
