@@ -80,14 +80,19 @@ const ActionButtons: React.FC<{ className?: string;
         <div className={`action-buttons ${className}`.trim()}>
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-            <Button variant="outline"><CircleQuestionMark /> For Reviewer</Button>
+            <Button variant="outline">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75">
+                <CircleQuestionMark className="relative inline-flex"/>
+              </span>
+              For Recruiters
+            </Button>
          </SheetTrigger>
         <SheetContent>
           <div className="p-4 space-y-2">
             <SheetTitle>Quick links for review:</SheetTitle>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="default">
-                <Link href="https://github.com/Inman2004/pastebin-lite" target="_blank" rel="noreferrer"><Github /> GitHub</Link>
+                <Link href="https://github.com/Inman2004/pastebin" target="_blank" rel="noreferrer"><Github /> GitHub</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="https://linkedin.com/in/rvimman" target="_blank" rel="noreferrer"><Linkedin />Profile</Link>
