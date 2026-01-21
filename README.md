@@ -53,7 +53,7 @@ pnpm tsx scripts/test-api.ts
 
 ## Persistence Layer
 
-This application uses PostgreSQL (NeonDB recommended) as the canonical persistence layer via the `PasteStore` interface.
+This application uses PostgreSQL (NeonDB) as the canonical persistence layer via the `PasteStore` interface.
 
 - **PostgreSQL / NeonDB**: Required. Set `DATABASE_URL` in your environment.
   - The application will create the `pastes` table automatically if it does not exist.
